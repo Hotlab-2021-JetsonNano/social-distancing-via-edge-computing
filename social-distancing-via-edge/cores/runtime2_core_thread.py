@@ -36,7 +36,7 @@ class TrtThread(threading.Thread):
 
             if frame is None:
                 self.threadQueue.setThreadSuccess(False)
-                self.threadQueue.putThreadQueue(None)
+                self.threadQueue.putThreadQueue(None, [])
             else:
                 boxes, confs, clss = self.trt_yolo.detect(frame, self.conf_th)
                 toc = time.time()
