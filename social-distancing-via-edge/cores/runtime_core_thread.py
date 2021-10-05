@@ -4,7 +4,7 @@ import threading ## Added for async
 import pycuda.driver as cuda ## Added for async
 import pycuda.autoinit  # This is needed for initializing CUDA driver
 
-from utils.yolo_with_plugins import TrtYOLO
+from utils.runtime_yolo_with_plugins import TrtYOLO
 
 from utils.distancing import show_distancing
 from utils.distancing_class import FrameData
@@ -43,11 +43,14 @@ class TrtThread(threading.Thread):
                 self.threadQueue.putThreadQueue(None)
             else:
                 boxes, confs, clss = self.trt_yolo.detect(frame, self.conf_th)
+                ttic = time.time()
                 frame = show_distancing(frame, boxes, self.frameData)
                 frame = self.frameData.show_fps(frame)
-                
+                ttoc = time.time()
+                print("C_Thread - algorithm      : ", '{:.2f}'.format(round((ttoc - ttic) * 1000, 2)).rjust(10), "ms") ##
+
                 toc = time.time()
-                print("Algorithm : ", '{:.2f}'.format(round((toc - tic) * 1000, 2)).rjust(10), "ms") ##
+                print("C_Thread : ", '{:.2f}'.format(round((toc - tic) * 1000, 2)).rjust(10), "ms") ##
                 
                 self.threadQueue.setThreadSuccess(True)
                 self.threadQueue.putThreadQueue(frame)

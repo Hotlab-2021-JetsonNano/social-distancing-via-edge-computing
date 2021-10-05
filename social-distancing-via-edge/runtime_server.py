@@ -14,7 +14,7 @@ def gen_frames():  # generate frame by frame from camera
     
     while True:
         toc = time.time()
-        print("Streaming : ", '{:.2f}'.format(round((toc - tic) * 1000, 2)).rjust(10), "ms") ##
+        print("M_Thread : ", '{:.2f}'.format(round((toc - tic) * 1000, 2)).rjust(10), "ms") ##
 
         frame = camera.get_frame()
         tic = time.time()
