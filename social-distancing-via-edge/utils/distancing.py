@@ -192,14 +192,14 @@ def show_analysis(img, config, idTable, frameData):  # 20211004 fezchoi # 202110
     
     violationRate, riskDensity, dangerLevel, msg, clr = frameData.get_analysis()
 
-    cv2.putText(img, 'Violation Rate  : '  + str(round(violationRate * 100, 2)).rjust(5) + '%', 
-                    (500, 320), 0, fontScale, color.black, fontThickness, lineType)
+    cv2.putText(img, 'Violation Rate  :  '  + str(round(violationRate * 100, 2)).rjust(5) + '%', 
+                    (500, 15), 0, fontScale, color.black, fontThickness, lineType)
     cv2.putText(img, 'Density Risk    : '  + str(round(riskDensity * 100, 2)).rjust(5) + '%', 
-                    (500, 330), 0, fontScale, color.black, fontThickness, lineType)
+                    (500, 30), 0, fontScale, color.black, fontThickness, lineType)
     cv2.putText(img, 'Current Danger : '   + str(round(dangerLevel * 100, 2)).rjust(5) + '%', 
-                    (500, 340), 0, fontScale, color.black, fontThickness, lineType)   
+                    (500, 45), 0, fontScale, color.black, fontThickness, lineType)   
     cv2.putText(img, 'Safety Message : ' + msg, 
-                    (500, 350), 0, fontScale, clr, fontThickness, lineType)
+                    (500, 60), 0, fontScale, clr, fontThickness, lineType)
     
     return img
 
