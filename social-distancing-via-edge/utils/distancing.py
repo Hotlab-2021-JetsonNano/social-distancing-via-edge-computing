@@ -161,37 +161,42 @@ def draw_polygons(img, config, idTable):
     cv2.addWeighted(overlay, opacity, img, 1 - opacity, 0, img)
     return img
 
-def show_analysis(img, config, idTable):  # 20211004 fezchoi
+def show_analysis(img, config, idTable, frameData):  # 20211004 fezchoi # 20211010 fezchoi
     if idTable.get_people_count() == 0:
         return img
 
-    peopleTotal = idTable.get_people_count()
-    peopleRisk  = idTable.get_high_risk_count()
-    violationRate = (peopleRisk / peopleTotal)
-
-    areaTotal = img.shape[0] * img.shape[1]
-    areaPolygon = idTable.get_polygonArea()
-    riskDensity = (areaPolygon / areaTotal)
-
-    danger = violationRate * riskDensity * 100
-
     color = config.get_colors()
     imgRatio, fontScale, fontThickness, lineType, radius = config.get_figure()
- 
-    msg, clr = '', color.black
+
+    if frameData.get_counter() % 30 == 1:
+        peopleTotal = idTable.get_people_count()
+        peopleRisk  = idTable.get_high_risk_count()
+        violationRate = (peopleRisk / peopleTotal)
+
+        areaTotal = img.shape[0] * img.shape[1]
+        areaPolygon = idTable.get_polygonArea()
+        riskDensity = (areaPolygon / areaTotal)
+
+        dangerLevel = violationRate * riskDensity * 100
     
-    if danger < 0.15:
-        msg, clr = 'Safe  ', color.green
-    elif danger < 0.25:
-        msg, clr = 'Danger', color.yellow
-    else :
-        msg, clr = 'Hazard', color.red
+        msg, clr = 'None', color.black
+        
+        if dangerLevel < 0.15:
+            msg, clr = 'Safe  ', color.green
+        elif dangerLevel < 0.25:
+            msg, clr = 'Danger', color.yellow
+        else :
+            msg, clr = 'Hazard', color.red
+
+        frameData.update_analysis(violationRate, riskDensity, dangerLevel, msg, clr)
+    
+    violationRate, riskDensity, dangerLevel, msg, clr = frameData.get_analysis()
 
     cv2.putText(img, 'Violation Rate  : '  + str(round(violationRate * 100, 2)).rjust(5) + '%', 
                     (500, 320), 0, fontScale, color.black, fontThickness, lineType)
     cv2.putText(img, 'Density Risk    : '  + str(round(riskDensity * 100, 2)).rjust(5) + '%', 
                     (500, 330), 0, fontScale, color.black, fontThickness, lineType)
-    cv2.putText(img, 'Current Danger : '   + str(round(danger * 100, 2)).rjust(5) + '%', 
+    cv2.putText(img, 'Current Danger : '   + str(round(dangerLevel * 100, 2)).rjust(5) + '%', 
                     (500, 340), 0, fontScale, color.black, fontThickness, lineType)   
     cv2.putText(img, 'Safety Message : ' + msg, 
                     (500, 350), 0, fontScale, clr, fontThickness, lineType)
@@ -258,6 +263,6 @@ def show_distancing(img, boxes, frameData):
     frameData.set_people(idTable.get_people())
 
 ### Analysis
-    img = show_analysis(img, config, idTable) # 20211004 fezchoi
+    img = show_analysis(img, config, idTable, frameData) # 20211004 fezchoi # 20211010 fezchoi
 
     return img

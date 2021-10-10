@@ -230,6 +230,7 @@ class FrameData:
         self.tic = 0.0
         self.toc = 0.0
         self.log = ""
+        self.analysis = 0.0, 0.0, 0.0, 'None', (0,0,0) # 20211010 fezchoi
 
     def get_people_len(self):
         return len(self.peopleList)
@@ -306,3 +307,10 @@ class FrameData:
         cv2.putText(img, fps_text, (11, 20), font, 1.0, (32, 32, 32), 4, line)
         cv2.putText(img, fps_text, (10, 20), font, 1.0, (240, 240, 240), 1, line)
         return img
+
+    def get_analysis(self): # 20211010 fezchoi
+        return self.analysis
+    
+    def update_analysis(self, violation, density, danger, msg, clr): # 20211010 fezchoi
+        self.analysis = violation, density, danger, msg, clr
+        return
