@@ -4,9 +4,6 @@ import pycuda.autoinit  # This is needed for initializing CUDA driver
 
 from utils.yolo_with_plugins import TrtYOLO
 
-from utils.distancing import show_distancing
-from utils.distancing_class import FrameData
-
 class TrtThread(threading.Thread):
     def __init__(self, condition, camera, args, threadQueue):
         threading.Thread.__init__(self)
@@ -28,26 +25,16 @@ class TrtThread(threading.Thread):
         print('TrtThread: start running...')
         self.running = True
 
-        self.frameData = FrameData()
-        self.frameData.set_timer()
-
         while self.running:
             frame = self.camera.read()
 
             if frame is None:
                 self.threadQueue.setThreadSuccess(False)
-                self.threadQueue.putThreadQueue(None)
+                self.threadQueue.putThreadQueue(None, [])
             else:
                 boxes, confs, clss = self.trt_yolo.detect(frame, self.conf_th)
-                frame = show_distancing(frame, boxes, self.frameData)
-                frame = self.frameData.show_fps(frame)
-                
                 self.threadQueue.setThreadSuccess(True)
-                self.threadQueue.putThreadQueue(frame)
-
-                self.frameData.increase_counter()
-                self.frameData.update_fps()
-                self.frameData.clear_log()
+                self.threadQueue.putThreadQueue(frame, boxes)
 
         del self.trt_yolo
         self.cuda_ctx.pop()
@@ -63,29 +50,24 @@ class TrtThread(threading.Thread):
 from queue import Queue
 
 class ThreadQueue:
-
     def __init__(self):
         self.frameQueue = Queue(5)
+        self.boxesQueue = Queue(5)
         self.success = True
     
-    def putThreadQueue(self, frame):
+    def putThreadQueue(self, frame, boxes):
         self.frameQueue.put(frame)
+        self.boxesQueue.put(boxes)
         return
 
     def getThreadQueue(self):
-        return self.frameQueue.get(), self.success
+        return self.frameQueue.get(), self.boxesQueue.get(), self.success
 
     def signalMainThread(self):
         self.frameQueue.task_done()
+        self.boxesQueue.task_done()
         return
     
     def setThreadSuccess(self, success):
         self.success = success
-        return
-
-    def isEmpty(self):
-        return self.frameQueue.empty()        
-
-    def destroy(self):
-        del self.frameQueue
         return

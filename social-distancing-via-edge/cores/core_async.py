@@ -8,6 +8,8 @@ import threading ## Added for async
 from cores.core_thread import TrtThread, ThreadQueue
 
 from utils.camera import add_camera_args, Camera
+from utils.distancing import show_distancing
+from utils.distancing_class import FrameData
 
 def parse_args(VIDEO_SOURCE):
         parser = argparse.ArgumentParser()
@@ -45,7 +47,9 @@ class YoloCamera:
         condition = threading.Condition() ## Added for async (09.14)
         self.threadQueue = ThreadQueue()
         self.trt_thread = TrtThread(condition, camera, args, self.threadQueue)  ## Added for async (09.14) 
-
+        self.frameData = FrameData()
+        self.frameData.set_timer()
+        
         self.BLACK_FRAME = cv2.putText(numpy.zeros((360, 640), dtype=numpy.uint8), 'Sorry! No frame to show :(', (100, 200), 0, 1, (255, 255, 255), 3)
 
     def thread_start(self):
@@ -57,10 +61,17 @@ class YoloCamera:
         return
 
     def get_frame(self):
-        frame, success = self.threadQueue.getThreadQueue()
+        frame, boxes, success = self.threadQueue.getThreadQueue()
         self.threadQueue.signalMainThread()
 
         if not success:
             return cv2.imencode('.jpg', self.BLACK_FRAME)[1].tobytes()
         else:
+            frame = show_distancing(frame, boxes, self.frameData)
+            frame = self.frameData.show_fps(frame)
+
+            self.frameData.increase_counter()
+            self.frameData.update_fps()
+            # self.frameData.clear_log()
+            
             return cv2.imencode('.jpg', frame)[1].tobytes()

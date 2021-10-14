@@ -1,7 +1,6 @@
 import cv2
 import itertools
 import numpy as np
-
 from utils.distancing_class import Configs, Person, IdTable
 from scipy.spatial import ConvexHull
 
@@ -45,7 +44,7 @@ def tracking_algorithm(height, coord, frameData):
     minDistanceIdx = -1
 
     # find closest person
-    for idx, person in enumerate(frameData.get_people()):
+    for idx, person in enumerate(frameData.peopleList):
         distance = calculate_distance(coord, person.get_coord())
         if minDistance > distance:
             minDistance = distance
@@ -55,13 +54,13 @@ def tracking_algorithm(height, coord, frameData):
     # if found 
     if minDistanceIdx != -1:
         person = frameData.poll_person(minDistanceIdx)
-        person.set(height, coord)
+        person.reset(height, coord)
         return person
 
     # (fail tracking)
     # if not found and has candidate 
-    if frameData.get_valids_len() > 0:
-        id = frameData.get_valids_min()
+    if frameData.get_valid_len() > 0:
+        id = frameData.get_valid_min()
     # if not found and has no candidate
     else :
         id = -1
@@ -90,13 +89,24 @@ def distancing_algorithm(idTable, person1, person2, frameTime):
 
     return
 
-def grouping_algorithm(img, config, idTable):
+def grouping_algorithm(img, config, idTable, frameData):
     color = config.get_colors()
     imgRatio, fontScale, fontThickness, lineType, radius = config.get_figure()
     imgRatio = int(10 * imgRatio)
 
     for person in idTable.get_people():
         x, y = person.get_coord()
+
+        ## Show Risk Time
+        #cv2.putText(img, str(person.get_riskTime()), (x, y), 0, fontScale, color.black, fontThickness, lineType)
+     
+        ## Show Height
+        # x1 = x - imgRatio
+        # y1 = y - int(person.get_height() / 2)
+        # cv2.putText(img, str(person.get_height()), (x1, y1), 0, fontScale, color.blue, fontThickness, lineType)
+
+        ## Show Person Id   
+        #cv2.putText(img, str(person.get_id()), (x1, y1), 0, fontScale, color.blue, fontThickness, lineType)
         
         ## Draw Green Circle
         if not person.is_updated():
@@ -111,14 +121,24 @@ def grouping_algorithm(img, config, idTable):
         ## Show Red Circle
         cv2.circle(img, person.get_coord(), radius, color.red, -1)
 
+        ## Show Red Count
+        # cv2.putText(img, str(person.get_redCount()), (x, y), 0, fontScale, color.red, fontThickness, lineType)
+        
         ## Show Definite Risk
         if person.is_definite_risk():
             x1 = x - imgRatio
             y1 = y - int(person.get_height() / 2)
             cv2.putText(img, "RISK", (x1, y1), 0, fontScale, color.red, fontThickness, lineType)
+            frameData.update_log(
+                'frame : {f} | person : {i} | risk time : {t}s \n'.format(
+                    f=str(frameData.get_counter()).rjust(5), 
+                    i=str(person.get_id()).rjust(5), 
+                    t=str(person.get_riskTime()).rjust(8)
+                )
+            )
         
         ## Set Group List
-        idTable.push_groupList(person.get_id(), person.get_coord())
+        idTable.set_groupList(person.get_id(), person.get_coord())
 
     return img
 
@@ -142,15 +162,15 @@ def draw_polygons(img, config, idTable):
     return img
 
 def show_analysis(img, config, idTable, frameData):  # 20211004 fezchoi # 20211010 fezchoi
-    if idTable.get_people_len() == 0:
+    if idTable.get_people_count() == 0:
         return img
 
     color = config.get_colors()
     imgRatio, fontScale, fontThickness, lineType, radius = config.get_figure()
 
     if frameData.get_counter() % 30 == 1:
-        peopleTotal = idTable.get_people_len()
-        peopleRisk  = idTable.get_risk_count()
+        peopleTotal = idTable.get_people_count()
+        peopleRisk  = idTable.get_high_risk_count()
         violationRate = (peopleRisk / peopleTotal)
 
         areaTotal = img.shape[0] * img.shape[1]
@@ -174,7 +194,7 @@ def show_analysis(img, config, idTable, frameData):  # 20211004 fezchoi # 202110
 
     cv2.putText(img, 'Violation Rate  :  '  + str(round(violationRate * 100, 2)).rjust(5) + '%', 
                     (500, 15), 0, fontScale, color.black, fontThickness, lineType)
-    cv2.putText(img, 'Risk Density    : '  + str(round(riskDensity * 100, 2)).rjust(5) + '%', 
+    cv2.putText(img, 'Density Risk    : '  + str(round(riskDensity * 100, 2)).rjust(5) + '%', 
                     (500, 30), 0, fontScale, color.black, fontThickness, lineType)
     cv2.putText(img, 'Current Danger : '   + str(round(dangerLevel * 100, 2)).rjust(5) + '%', 
                     (500, 45), 0, fontScale, color.black, fontThickness, lineType)   
@@ -206,11 +226,11 @@ def show_distancing(img, boxes, frameData):
             peopleList.append(person)
 
 ### Check Untracked people
-    frameData.init_invalids()
+    frameData.init_invalid()
 
 ### Distancing Algorithm
     ## create id info table
-    idTable.init_idList(frameData.get_invalids())
+    idTable.init_idList(frameData.get_invalid())
 
     ## make combinations of idx
     peopleIdxCombi = create_idx_combination(peopleList)
@@ -229,13 +249,13 @@ def show_distancing(img, boxes, frameData):
     config = Configs(img)
     idTable.init_groupList()
     
-    img = grouping_algorithm(img, config, idTable)
+    img = grouping_algorithm(img, config, idTable, frameData)
     img = draw_polygons(img, config, idTable)
 
 ### Check Undetected people
     for person in frameData.get_people():
         if person.is_erasable(img.shape[:2]) or person.is_missable():
-            frameData.set_valids(person.get_id())
+            frameData.set_valid(person.get_id())
         else :
             person.inc_missCount()
             idTable.add_person(person)

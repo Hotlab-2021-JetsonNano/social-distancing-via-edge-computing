@@ -9,7 +9,6 @@ class Colors:
         self.green  = (0, 255, 0)
         self.black  = (0, 0, 0)
 
-
 class Configs:
     def __init__(self, img):
         self.colors = Colors()
@@ -25,6 +24,9 @@ class Configs:
 
     def get_figure(self):
         return self.imgRatio, self.fontScale / 3, self.fontThickness, self.lineType, self.radius
+
+    def get_figure_line(self):
+        return self.lineThickness, self.lineType
     
 
 class Person:
@@ -38,7 +40,7 @@ class Person:
         self.isYellow = False
         self.missCount = 0
 
-    def set(self, height, coord):
+    def reset(self, height, coord):
         self.height = height
         self.coord = coord
         self.isUpdated = False
@@ -48,39 +50,55 @@ class Person:
 
     def get_id(self):
         return self.id
-
     def set_id(self, id):
         self.id = id
         return
 
     def get_height(self):
         return self.height
+    def set_height(self, height):
+        self.height = height
+        return
 
     def get_coord(self):
         return self.coord
+    def set_coord(self, coord):
+        self.coord = coord
+        return
 
     def is_updated(self):
         return self.isUpdated
-
     def set_updated(self, value):
         self.isUpdated = value
         return
 
     def is_yellow(self):
         return self.isYellow
-        
     def set_yellow(self, value):
         self.isYellow = value
         return
 
+    def get_redCount(self):
+        return self.redCount
+    def inc_redCount(self):
+        self.redCount += 1
+        return
+    def clear_redCount(self):
+        self.redCount = 0
+        return
+    def is_red(self):               # 20211004 fezchoi
+        return self.redCount > 0
+    # def is_definite_risk(self):
+    #     return self.redCount > 30
+
+    def get_riskTime(self):
+        return self.riskTime
     def inc_riskTime(self, time):
         self.riskTime = round(self.riskTime + time, 2)
         return
-
     def clear_riskTime(self):
         self.riskTime = 0.0
         return
-
     def is_definite_risk(self):
         return self.riskTime > 10.0
 
@@ -93,10 +111,11 @@ class Person:
     def inc_missCount(self):
         self.missCount += 1
         return
-
+    def clear_missCount(self):
+        self.missCount = 0
+        return
     def is_missable(self):
         return self.missCount > 20
-
 
 class IdTable:
     def __init__(self):
@@ -125,9 +144,19 @@ class IdTable:
     def get_people(self):
         return self.peopleList
 
+    def get_person(self, index):
+        return self.peopleList[index]
+
     def add_person(self, person):
         self.peopleList.append(person)
         return
+
+    def get_ids(self, person):
+        index = self.personIdList.index(person.get_id())
+        return self.personIdList[index], self.parentIdList[index]
+
+    def get_personIdx(self, personId):
+        return self.personIdList.index(personId)
 
     def get_parentIdx(self, parentId):
         return self.parentIdList.index(parentId)
@@ -143,7 +172,9 @@ class IdTable:
         if personId == parentId:
             return parentId
         else :
+            #personId = parentId
             parentId = self.find_parentId(parentId)
+            #self.set_parentId(personId, parentId)
             return parentId
 
     def merge_parentIds(self, personId1, personId2):
@@ -155,16 +186,26 @@ class IdTable:
     def get_groupList(self):
         return self.groupCoordsList
 
-    def push_groupList(self, personId, personCoord):
+    def set_groupList(self, personId, personCoord):
         parentId = self.find_parentId(personId)
         parentIdx = self.get_parentIdx(parentId)
         self.groupCoordsList[parentIdx].append(personCoord)
         return
 
-    def get_people_len(self): # 20211004 fezchoi
-        return len(self.peopleList)
+    def update_red(self, index, frameTime):
+        if self.peopleList[index].is_updated():
+            self.peopleList[index].inc_riskTime(frameTime)
+            self.peopleList[index].set_updated(True)
+        return
 
-    def get_risk_count(self): # 20211004 fezchoi
+    def update_yellow(self, index):
+        self.peopleList[index].set_yellow(True)
+        return
+
+    def get_people_count(self): # 20211004 fezchoi
+        return len(self.peopleList)
+    
+    def get_high_risk_count(self): # 20211004 fezchoi
         peopleRisk = 0
         for person in self.peopleList:
             if person.is_definite_risk():
@@ -188,13 +229,14 @@ class FrameData:
         self.fps = 0.0
         self.tic = 0.0
         self.toc = 0.0
+        self.log = ""
         self.analysis = 0.0, 0.0, 0.0, 'None', (0,0,0) # 20211010 fezchoi
-
-    def get_people(self):
-        return self.peopleList
 
     def get_people_len(self):
         return len(self.peopleList)
+
+    def get_people(self):
+        return self.peopleList
 
     def set_people(self, peopleList):
         self.peopleList = peopleList[:]
@@ -205,22 +247,22 @@ class FrameData:
         del self.peopleList[index]
         return person
 
-    def init_invalids(self):
+    def init_invalid(self):
         self.invalidIdList = set([person.get_id() for person in self.peopleList])
         return
 
-    def get_invalids(self):
+    def get_invalid(self):
         return self.invalidIdList
-
-    def get_valids_len(self):
+    
+    def get_valid_len(self):
         return len(self.validIdList)
 
-    def get_valids_min(self):
+    def get_valid_min(self):
         id = min(self.validIdList)
         self.validIdList.remove(id)
         return id
 
-    def set_valids(self, id):
+    def set_valid(self, id):
         self.invalidIdList.remove(id)
         self.validIdList.add(id)
         return
@@ -238,7 +280,7 @@ class FrameData:
 
     def get_fps(self):
         return self.fps
-
+    
     def update_fps(self):
         self.toc = time.time()
         curr_fps = 1.0 / (self.toc - self.tic)
@@ -246,6 +288,18 @@ class FrameData:
         self.tic = self.toc
         return
 
+    def get_log(self):
+        return self.log
+
+    def update_log(self, log):
+        self.log += log
+        return
+    
+    def clear_log(self):
+        self.log = ""
+        return
+
+    ## display 
     def show_fps(self, img):
         fps_text = 'FPS: {:.2f}'.format(self.fps)
         font = cv2.FONT_HERSHEY_PLAIN
@@ -256,7 +310,7 @@ class FrameData:
 
     def get_analysis(self): # 20211010 fezchoi
         return self.analysis
-
+    
     def update_analysis(self, violation, density, danger, msg, clr): # 20211010 fezchoi
         self.analysis = violation, density, danger, msg, clr
         return
