@@ -58,3 +58,4 @@ AP of the model improved.
 * Social-Distancing Monitoring :  https://github.com/dongfang-steven-yang/social-distancing-monitoring
 * Web Streaming from IP camera with Flask : https://gist.github.com/raiever/df5b6c48217df521094cbe2d12c32c66
 * OpenCV Stream Video to Web : https://github.com/pornpasok/opencv-stream-video-to-web
+* Kakao Map API Guide : https://apis.map.kakao.com
