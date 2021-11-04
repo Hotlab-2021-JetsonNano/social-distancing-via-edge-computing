@@ -180,6 +180,7 @@ def show_analysis(img, config, idTable, frameData):  # 20211004 fezchoi # 202110
                     (500, 45), 0, fontScale, color.black, fontThickness, lineType)   
     cv2.putText(img, 'Safety Message : ' + msg, 
                     (500, 60), 0, fontScale, clr, fontThickness, lineType)
+    cv2.rectangle(img, (0, 0), (img.shape[1], img.shape[0]), clr, 3)    # 20211104 fezchoi
     
     return img
 
